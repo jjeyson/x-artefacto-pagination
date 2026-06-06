@@ -1,8 +1,0 @@
-com/think/commons/ICrudCommons.class
-com/think/commons/PaginationModel.class
-com/think/commons/SpecificationProjectionUtil.class
-com/think/commons/PageResponse$PageResponseBuilder.class
-com/think/commons/SortModel.class
-com/think/commons/EnumsOperators.class
-com/think/commons/FilterModel.class
-com/think/commons/PageResponse.class
