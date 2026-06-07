@@ -1,4 +1,4 @@
-package com.think.commons;
+package com.think.xartefactopagination;
 
 public interface ICrudCommons<REQ, RES, ID> {
     RES save(REQ request);

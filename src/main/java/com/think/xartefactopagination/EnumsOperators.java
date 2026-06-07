@@ -1,4 +1,4 @@
-package com.think.commons;
+package com.think.xartefactopagination;
 
 public enum EnumsOperators {
 

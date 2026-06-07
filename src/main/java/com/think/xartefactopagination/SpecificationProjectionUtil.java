@@ -1,75 +1,94 @@
-package com.think.commons;
+package com.think.xartefactopagination;
 
+import java.lang.reflect.Method;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 import io.quarkus.panache.common.Page;
-import jakarta.enterprise.context.Dependent;
+
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
 
-@Dependent
-public class SpecificationProjectionUtil<T> {
+public final class SpecificationProjectionUtil {
 
+    private SpecificationProjectionUtil() {
+    }
 
-    @PersistenceContext
-    private EntityManager entityManager;
-
-    public <R> PageResponse<R> filterSortProjection(
-         Class<T> entityClass, 
+    public static <T, R> PageResponse<R> filterSortProjection(
+         EntityManager entityManager,
+         Class<T> entityClass,
          String selectClause ,
          String joinClause,
+         List<String> fieldsReturnResultClass,
          Map<String, Object> filtersMap,
          Map<String, Object> sorts,
          Page pageable,
          Class<R> resultClass
-        ) 
-         {
+         ) {
+
+            filtersMap = filtersMap == null
+                    ? Collections.emptyMap()
+                    : filtersMap;
+
+            sorts = sorts == null
+                    ? Collections.emptyMap()
+                    : sorts;     
+                    
+                    
+
 
             StringBuilder whereClause = new StringBuilder();
             StringBuilder orderByClause = new StringBuilder();
 
-            whereClause = this.buildWhereClause(filtersMap);
-            orderByClause = this.buildOrderByClause(sorts, filtersMap);
+            whereClause = buildWhereClause( filtersMap);
+            orderByClause = buildOrderByClause(sorts, filtersMap);
 
 
-            String jpql = "SELECT " + selectClause + " FROM " + entityClass.getSimpleName() + " p "
+            String jpql = selectClause  + "  "
                     + (joinClause != null ? joinClause + " " : "")
                     + (whereClause != null ? whereClause + " " : "")
                     + (orderByClause != null ? orderByClause + " " : "");
 
 
-            TypedQuery<R> selectQuery = entityManager.createQuery(jpql, resultClass);    
+
+            TypedQuery<?> selectQuery = (TypedQuery) entityManager.createQuery(jpql);
+
+            selectQuery = (TypedQuery<R>) setQueryParams(filtersMap, selectQuery);
+
+
             
             String countJpql = "SELECT COUNT(p) FROM " + entityClass.getSimpleName() + " p "
                         + (joinClause != null ? joinClause + " " : "")
                         + whereClause;
 
-            selectQuery = (TypedQuery<R>) this.setQueryParams(filtersMap, selectQuery);
+            selectQuery = (TypedQuery<R>) setQueryParams(filtersMap, selectQuery);
 
             TypedQuery<Long> countQuery = entityManager.createQuery(countJpql, Long.class);   
             
-            countQuery = (TypedQuery<Long>) this.setQueryParams(filtersMap, countQuery);
+            countQuery = (TypedQuery<Long>) setQueryParams(filtersMap, countQuery);
 
             Long totalElements = countQuery.getSingleResult();
             int pageSize = pageable.size > 0 ? pageable.size : 1;
             int totalPages = (int) Math.ceil((double) totalElements / pageSize);
             selectQuery.setFirstResult(pageable.index * pageSize);
             selectQuery.setMaxResults(pageSize);
-            var result = selectQuery.getResultList();
-            return new PageResponse<>(result, pageable.index, pageSize, totalElements, totalPages);
+            List<Object[]> result = (List<Object[]>) selectQuery.getResultList();
 
 
+            List<R> content = result.stream()
+                .map(row -> map(row, fieldsReturnResultClass, resultClass))
+                .toList();       
 
-            //return null;
+            return new PageResponse<>(content, pageable.index, pageSize, totalElements, totalPages);
+
          }
 
 
-         private StringBuilder buildWhereClause( Map<String, Object> filtersMap) {
+        static StringBuilder buildWhereClause( Map<String, Object> filtersMap) {
             StringBuilder whereClause = new StringBuilder();
 
                     if (filtersMap != null && !filtersMap.isEmpty()) {
@@ -144,7 +163,7 @@ public class SpecificationProjectionUtil<T> {
          
          }
 
-         private StringBuilder buildOrderByClause(Map<String, Object> sorts, Map<String, Object> filtersMap) {
+         static  StringBuilder buildOrderByClause(Map<String, Object> sorts, Map<String, Object> filtersMap) {
 
             StringBuilder orderByClause = new StringBuilder();
             if (sorts != null) {
@@ -175,7 +194,7 @@ public class SpecificationProjectionUtil<T> {
          }
 
 
-         private TypedQuery<?> setQueryParams( Map<String, Object> filtersMap, TypedQuery<?> query) {
+        static TypedQuery<?> setQueryParams(  Map<String, Object> filtersMap, TypedQuery<?> query) {
             StringBuilder whereClause = new StringBuilder();
 
                     if (filtersMap != null && !filtersMap.isEmpty()) {
@@ -254,5 +273,56 @@ public class SpecificationProjectionUtil<T> {
                     return query;
          
          }
+
+
+        public static <R> R map(
+                    Object[] row,
+                    List<String> fields,
+                    Class<R> dtoClass) {
+
+                try {
+
+                    Method builderMethod = dtoClass.getMethod("builder");
+
+                    Object builder = builderMethod.invoke(null);
+
+                    for (int i = 0; i < fields.size(); i++) {
+
+                        String fieldName = fields.get(i);
+
+                        Object value = row[i];
+
+                        if (value == null) {
+                            continue;
+                        }
+
+                        Method setter =
+                                Arrays.stream(
+                                        builder.getClass()
+                                                .getMethods())
+                                        .filter(m ->
+                                                m.getName()
+                                                .equals(fieldName))
+                                        .findFirst()
+                                        .orElse(null);
+
+                        if (setter != null) {
+
+                            setter.invoke(
+                                    builder,
+                                    value);
+                        }
+                    }
+
+                    Method buildMethod = builder.getClass().getMethod("build");
+
+                    return (R) buildMethod.invoke(builder);
+
+                } catch (Exception e) {
+
+                    throw new RuntimeException(e);
+
+                }
+    }            
 
 }

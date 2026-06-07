@@ -1,4 +1,4 @@
-package com.think.commons;
+package com.think.xartefactopagination;
 
 import java.util.HashMap;
 import java.util.List;
