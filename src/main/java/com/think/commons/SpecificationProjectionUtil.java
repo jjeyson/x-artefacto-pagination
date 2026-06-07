@@ -23,7 +23,6 @@ public class SpecificationProjectionUtil<T> {
          Class<T> entityClass, 
          String selectClause ,
          String joinClause,
-         Map<String, Object> filters,
          Map<String, Object> filtersMap,
          Map<String, Object> sorts,
          Page pageable,
@@ -34,7 +33,7 @@ public class SpecificationProjectionUtil<T> {
             StringBuilder whereClause = new StringBuilder();
             StringBuilder orderByClause = new StringBuilder();
 
-            whereClause = this.buildWhereClause(filters, filtersMap);
+            whereClause = this.buildWhereClause(filtersMap);
             orderByClause = this.buildOrderByClause(sorts, filtersMap);
 
 
@@ -50,11 +49,11 @@ public class SpecificationProjectionUtil<T> {
                         + (joinClause != null ? joinClause + " " : "")
                         + whereClause;
 
-            selectQuery = (TypedQuery<R>) this.setQueryParams(filters, filtersMap, selectQuery);
+            selectQuery = (TypedQuery<R>) this.setQueryParams(filtersMap, selectQuery);
 
             TypedQuery<Long> countQuery = entityManager.createQuery(countJpql, Long.class);   
             
-            countQuery = (TypedQuery<Long>) this.setQueryParams(filters, filtersMap, countQuery);
+            countQuery = (TypedQuery<Long>) this.setQueryParams(filtersMap, countQuery);
 
             Long totalElements = countQuery.getSingleResult();
             int pageSize = pageable.size > 0 ? pageable.size : 1;
@@ -70,14 +69,14 @@ public class SpecificationProjectionUtil<T> {
          }
 
 
-         private StringBuilder buildWhereClause( Map<String, Object> filters, Map<String, Object> filtersMap) {
+         private StringBuilder buildWhereClause( Map<String, Object> filtersMap) {
             StringBuilder whereClause = new StringBuilder();
 
-                    if (filters != null && !filters.isEmpty()) {
+                    if (filtersMap != null && !filtersMap.isEmpty()) {
                         whereClause.append("WHERE ");
                         int i = 0;
 
-                        for (String key : filters.keySet()) {
+                        for (String key : filtersMap.keySet()) {
 
                             if (i > 0)
                                 whereClause.append(" AND ");
@@ -176,14 +175,14 @@ public class SpecificationProjectionUtil<T> {
          }
 
 
-         private TypedQuery<?> setQueryParams( Map<String, Object> filters, Map<String, Object> filtersMap, TypedQuery<?> query) {
+         private TypedQuery<?> setQueryParams( Map<String, Object> filtersMap, TypedQuery<?> query) {
             StringBuilder whereClause = new StringBuilder();
 
-                    if (filters != null && !filters.isEmpty()) {
+                    if (filtersMap != null && !filtersMap.isEmpty()) {
                         whereClause.append("WHERE ");
                         int i = 0;
 
-                        for (String key : filters.keySet()) {
+                        for (String key : filtersMap.keySet()) {
 
                             if (i > 0)
                                 whereClause.append(" AND ");
@@ -210,8 +209,8 @@ public class SpecificationProjectionUtil<T> {
                                         query.setParameter(key.replace(".", "_"), "%" + value + "%");
                                         break;
                                     case "BETWEEN":
-                                        query.setParameter(key.replace(".", "_") + "Start", ((List<?>) filters.get(key)).get(0));
-                                        query.setParameter(key.replace(".", "_") + "End", ((List<?>) filters.get(key)).get(1));
+                                        query.setParameter(key.replace(".", "_") + "Start", ((List<?>) filtersMap.get(key)).get(0));
+                                        query.setParameter(key.replace(".", "_") + "End", ((List<?>) filtersMap.get(key)).get(1));
                                         break;
                                     case "DATE_RANGE":
                                         String[] fechas = value.split("\\|");
@@ -244,7 +243,7 @@ public class SpecificationProjectionUtil<T> {
                                         }    
                                 }
                             } else {
-                                query.setParameter(key.replace(".", "_"), filters.get(key));
+                                query.setParameter(key.replace(".", "_"), filtersMap.get(key));
                             }
 
                             i++;
