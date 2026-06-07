@@ -5,9 +5,11 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.think</groupId>
-    <artifactId>think-quarkus-commons</artifactId>
+    <artifactId>x-artefacto-pagination</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
+
+
 
     <properties>
         <maven.compiler.release>25</maven.compiler.release>
@@ -63,6 +65,9 @@
     </dependencies>
 
     <build>
+
+        <finalName>${project.artifactId}-${project.version}</finalName>
+
         <plugins>
 
                 <plugin>
@@ -90,4 +95,15 @@
 
         </plugins>
     </build>
+
+
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <name>GitHub Packages</name>
+            <url>
+                https://maven.pkg.github.com/THINK-QUARKUS/x-artefacto-pagination
+            </url>
+        </repository>
+    </distributionManagement>
 </project>
