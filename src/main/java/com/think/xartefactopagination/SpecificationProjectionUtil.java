@@ -8,8 +8,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import io.quarkus.panache.common.Page;
-
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 
@@ -26,7 +24,7 @@ public final class SpecificationProjectionUtil {
          List<String> fieldsReturnResultClass,
          Map<String, Object> filtersMap,
          Map<String, Object> sorts,
-         Page pageable,
+         PageableCommons pageable,
          Class<R> resultClass
          ) {
 
