@@ -1,10 +1,15 @@
 package com.think.xartefactopagination;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -164,29 +169,32 @@ public final class SpecificationProjectionUtil {
          static  StringBuilder buildOrderByClause(Map<String, Object> sorts, Map<String, Object> filtersMap) {
 
             StringBuilder orderByClause = new StringBuilder();
-            if (sorts != null) {
+            if (sorts != null && !sorts.isEmpty()) {
                 int i = 0;
-                String direction = "ASC"; // Default direction
                 for (var map : sorts.entrySet()) {
                     String key = map.getKey();
+                    String direction = map.getValue() != null ? map.getValue().toString().toUpperCase() : "ASC";
 
-                    boolean keyMap = filtersMap.containsKey(key);
-                    if (keyMap) {
-                        if (i == 0)
-                            orderByClause.append("ORDER BY ");
-
-                        if (i > 0)
-                            orderByClause.append(", ");
-
-                        Map<String, Object> sortData = (Map<String, Object>) filtersMap.get(key);
-                        String columnName = sortData.get("columnName").toString();
-                        direction = map.getValue().toString().toUpperCase();
-                        orderByClause.append(columnName).append(" ").append(direction);
+                    if (i == 0) {
+                        orderByClause.append("ORDER BY ");
+                    } else {
+                        orderByClause.append(", ");
                     }
 
+                    String columnName = key;
+                    if (filtersMap != null && filtersMap.containsKey(key)) {
+                        Object sortData = filtersMap.get(key);
+                        if (sortData instanceof Map<?, ?> sortMap) {
+                            Object columnValue = sortMap.get("columnName");
+                            if (columnValue != null) {
+                                columnName = columnValue.toString();
+                            }
+                        }
+                    }
+
+                    orderByClause.append(columnName).append(" ").append(direction);
                     i++;
                 }
-
             }
             return orderByClause;
          }
@@ -273,21 +281,119 @@ public final class SpecificationProjectionUtil {
          }
 
 
+        private static Object convertValue(Object value, Class<?> targetType) {
+            if (value == null || targetType == null || targetType.isInstance(value)) {
+                return value;
+            }
+
+            if (targetType == String.class) {
+                if (value instanceof Date date) {
+                    return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(date);
+                }
+                if (value instanceof LocalDate localDate) {
+                    return localDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                }
+                if (value instanceof LocalDateTime localDateTime) {
+                    return localDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                }
+                return String.valueOf(value);
+            }
+
+            if (targetType == Long.class || targetType == long.class) {
+                if (value instanceof Number number) {
+                    return number.longValue();
+                }
+                return Long.valueOf(value.toString());
+            }
+
+            if (targetType == Integer.class || targetType == int.class) {
+                if (value instanceof Number number) {
+                    return number.intValue();
+                }
+                return Integer.valueOf(value.toString());
+            }
+
+            if (targetType == Double.class || targetType == double.class) {
+                if (value instanceof Number number) {
+                    return number.doubleValue();
+                }
+                return Double.valueOf(value.toString());
+            }
+
+            if (targetType == Boolean.class || targetType == boolean.class) {
+                if (value instanceof Boolean bool) {
+                    return bool;
+                }
+                return Boolean.valueOf(value.toString());
+            }
+
+            if (targetType == LocalDate.class) {
+                if (value instanceof LocalDate localDate) {
+                    return localDate;
+                }
+                if (value instanceof Date date) {
+                    return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+                }
+                if (value instanceof String text) {
+                    return LocalDate.parse(text, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                }
+            }
+
+            if (targetType == LocalDateTime.class) {
+                if (value instanceof LocalDateTime localDateTime) {
+                    return localDateTime;
+                }
+                if (value instanceof Date date) {
+                    return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+                }
+                if (value instanceof String text) {
+                    try {
+                        return LocalDateTime.parse(text);
+                    } catch (Exception ignored) {
+                        return LocalDateTime.parse(text, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                    }
+                }
+            }
+
+            if (targetType.isEnum() && value instanceof String text) {
+                return Enum.valueOf((Class<? extends Enum>) targetType, text);
+            }
+
+            return value;
+        }
+
         public static <R> R map(
                     Object[] row,
                     List<String> fields,
                     Class<R> dtoClass) {
 
                 try {
+                    if (dtoClass.isRecord()) {
+                        Constructor<?> ctor = dtoClass.getDeclaredConstructors()[0];
+                        @SuppressWarnings("unchecked")
+                        Constructor<R> constructor = (Constructor<R>) ctor;
+                        constructor.setAccessible(true);
+
+                        Class<?>[] parameterTypes = constructor.getParameterTypes();
+                        Object[] values = new Object[parameterTypes.length];
+
+                        for (int i = 0; i < parameterTypes.length; i++) {
+                            if (i < fields.size()) {
+                                values[i] = row[i];
+                            } else {
+                                values[i] = null;
+                            }
+                        }
+
+                        return constructor.newInstance(values);
+                    }
 
                     Method builderMethod = dtoClass.getMethod("builder");
-
                     Object builder = builderMethod.invoke(null);
 
                     for (int i = 0; i < fields.size(); i++) {
 
                         String fieldName = fields.get(i);
-
                         Object value = row[i];
 
                         if (value == null) {
@@ -305,21 +411,19 @@ public final class SpecificationProjectionUtil {
                                         .orElse(null);
 
                         if (setter != null) {
-
-                            setter.invoke(
-                                    builder,
-                                    value);
+                            Class<?>[] paramTypes = setter.getParameterTypes();
+                            Object convertedValue = paramTypes.length > 0
+                                    ? convertValue(value, paramTypes[0])
+                                    : value;
+                            setter.invoke(builder, convertedValue);
                         }
                     }
 
                     Method buildMethod = builder.getClass().getMethod("build");
-
                     return (R) buildMethod.invoke(builder);
 
                 } catch (Exception e) {
-
                     throw new RuntimeException(e);
-
                 }
     }            
 
