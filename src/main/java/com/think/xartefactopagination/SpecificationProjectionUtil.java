@@ -377,14 +377,23 @@ public final class SpecificationProjectionUtil {
                         Class<?>[] parameterTypes = constructor.getParameterTypes();
                         Object[] values = new Object[parameterTypes.length];
 
+                        if(parameterTypes.length > fields.size()){
+                            throw new IllegalArgumentException("El número de campos en fields no coincide con el número de parámetros en el constructor del DTO");
+                        }
+
                         for (int i = 0; i < parameterTypes.length; i++) {
                             if (i < fields.size()) {
-                                values[i] = row[i];
+
+                                Object convertedValue =  convertValue(row[i], parameterTypes[i]);
+                                values[i] = convertedValue;
+                                  
+                                //values[i] = row[i];
+                                //System.out.println("Mapping field: " + fields.get(i) + " with value: " + values[i]);
                             } else {
                                 values[i] = null;
                             }
                         }
-
+                        //System.out.println("Mapping row to DTO: " + Arrays.toString(values));
                         return constructor.newInstance(values);
                     }
 
@@ -423,6 +432,9 @@ public final class SpecificationProjectionUtil {
                     return (R) buildMethod.invoke(builder);
 
                 } catch (Exception e) {
+                    e.printStackTrace();
+                    System.out.println("Error mapping row to DTO: " + e.getMessage());
+                    
                     throw new RuntimeException(e);
                 }
     }            
