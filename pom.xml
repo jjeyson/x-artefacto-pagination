@@ -11,12 +11,12 @@
 
 
 
-    <properties>
-        <maven.compiler.release>25</maven.compiler.release>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <quarkus.platform.version>3.33.1</quarkus.platform.version>
-        <lombok.version>1.18.46</lombok.version>
-    </properties>
+<properties>
+    <maven.compiler.release>21</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <quarkus.platform.version>3.34.1</quarkus.platform.version>
+    <lombok.version>1.18.46</lombok.version>
+</properties>
 
     <dependencyManagement>
         <dependencies>
