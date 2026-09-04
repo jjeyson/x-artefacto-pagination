@@ -102,7 +102,7 @@
             <id>github</id>
             <name>GitHub Packages</name>
             <url>
-                https://maven.pkg.github.com/THINK-QUARKUS/x-artefacto-pagination
+                https://maven.pkg.github.com/jjeyson/x-artefacto-pagination
             </url>
         </repository>
     </distributionManagement>
