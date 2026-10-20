@@ -34,7 +34,7 @@ jobs:
         run: chmod +x mvnw
 
       - name: Compilar y publicar paquete
-        run: mvn -B --no-transfer-progress clean deploy -DskipTests
+        run: ./mvnw -B --no-transfer-progress clean deploy -DskipTests
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
