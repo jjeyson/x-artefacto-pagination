@@ -4,7 +4,7 @@
 
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>io.github.jjeyson</groupId>
+    <groupId>com.think</groupId>
     <artifactId>x-artefacto-pagination</artifactId>
     <version>1.0.9</version>
     <packaging>jar</packaging>
@@ -101,9 +101,7 @@
         <repository>
             <id>github</id>
             <name>GitHub Packages</name>
-            <url>
-                https://maven.pkg.github.com/jjeyson/x-artefacto-pagination
-            </url>
+            <url>https://maven.pkg.github.com/jjeyson/x-artefacto-pagination</url>
         </repository>
     </distributionManagement>
 </project>
